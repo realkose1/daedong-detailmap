@@ -1,0 +1,6 @@
+data/
+out/
+work/
+.venv/
+bin/
+__pycache__/

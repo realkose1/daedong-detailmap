@@ -1,0 +1,5 @@
+# Python 3.9+; install into tools/detailmap/.venv (see build.sh)
+numpy==2.0.2
+rasterio==1.4.3
+scipy==1.13.1
+Pillow==11.3.0

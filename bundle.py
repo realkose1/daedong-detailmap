@@ -5,16 +5,17 @@ reads  work/osm_features.pkl (osm_extract.py), work/terrain/*.json (terrain.py),
        work/korea_crop.npz (land.py: everything is cropped to Korea; the boundary rivers stay whole),
        the general-map scene MapBase.json (read only; $DETAILMAP_MAPBASE, else ../../Daedong/Resources/Map/MapBase.json,
        else data/MapBase.json: see common.mapbase_path)
-writes out/bundle/peaks_{A,B,C}.bin   glyph lists per zoom band (A ~4x, B ~8x, C ~16x)
-       out/bundle/lines_{A,B}.bin     coastline, rivers (A) and streams (B), lakes and wide rivers
-       out/bundle/ridges.bin          major divides for the faint connecting ridge wash
+writes out/bundle/lines_{A,B}.bin     coastline, rivers (A) and streams (B), lakes and wide rivers
        out/bundle/land_{A,B}.bin      Korean land polygons per tile (land.py), and detail_area.png from land.py
        out/bundle/labels.bin          peaks, streams and rivers, 시·군·읍 names (Korean)
        out/general/glyph_moves.json   the general map's hand-drawn mountains moved onto real summits
        out/general/MapBase_moved.json the same, applied to a copy of the general scene (for previews)
        out/bundle/chars.txt, chars_missing.txt  characters the labels need / not in the current font subset
        out/sizes.json
-       work/bands.pkl, work/peaks.json, work/ridges.json   (check data for a preview renderer; not used here)
+       work/bands.pkl, work/peaks.json, work/ridges.json   (work/peaks.json is read by bands.py; the others are check
+                                      data for a preview renderer and are not used here)
+       out/legacy/peaks_{A,B,C}.bin, out/legacy/ridges.bin  the per-summit glyph lists and the divide wash that the app
+                                      used before the layered range bands (bands.py); the app no longer reads them
 
 File format (all little endian): see geom.pack. Tile payloads:
   peaks: count, then per glyph: dx, dy (zigzag varint, 1/64 pt, sorted by y), kind (0 sharp, 1 round, 2 mound,
@@ -142,6 +143,7 @@ def main():
     G.clusters(peaks)
     json.dump(peaks, open(os.path.join(WORK, 'peaks.json'), 'w'), ensure_ascii=False)
     json.dump(ridges, open(os.path.join(WORK, 'ridges.json'), 'w'))
+    os.makedirs(os.path.join(OUT, 'legacy'), exist_ok=True)
     sizes = {'peaks_total': len(peaks), 'named_peaks': len(taken)}
     counts = {}
     for band, level in BAND_LEVEL.items():
@@ -207,7 +209,7 @@ def main():
                          | (4 if q.get('name') and kk != 'spire' else 0))
             payload[(i, j)] = bytes(b)
         data = pack(payload, b'DDP1')
-        open(os.path.join(OUT, 'bundle', f'peaks_{band}.bin'), 'wb').write(data)
+        open(os.path.join(OUT, 'legacy', f'peaks_{band}.bin'), 'wb').write(data)
         sizes[f'peaks_{band}.bin'] = len(data)
         counts[band] = n
     sizes['glyphs_per_band'] = counts
@@ -283,7 +285,7 @@ def main():
                 b.append(min(255, int(round(wi * 255))))
         payload[(i, j)] = bytes(b)
     data = pack(payload, b'DDR1')
-    open(os.path.join(OUT, 'bundle', 'ridges.bin'), 'wb').write(data)
+    open(os.path.join(OUT, 'legacy', 'ridges.bin'), 'wb').write(data)
     sizes['ridges.bin'] = len(data)
     # ---------------- Korean land polygons per tile
     land = pickle.load(open(os.path.join(WORK, 'land.pkl'), 'rb'))

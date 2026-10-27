@@ -8,17 +8,18 @@
 
 수묵화 느낌의 한반도 지도 앱 「대동명소도」에서 지도를 크게 키우면 나타나는 상세 지도 자료를 만드는 도구 모음입니다.
 OpenStreetMap과 Copernicus GLO-30 높낮이 자료를 읽어서 앱이 쓰는 이진 파일을 만듭니다.
+앱은 이 자료로 산줄기를 가로로 겹친 띠 모양의 붓 그림으로 그리고, 그 위에 해안선, 강, 개울, 호수, 이름표를 얹습니다. 한양과 서라벌을 깊이 키우면 도성 성벽, 궁궐 담장, 옛 건물, 큰길도 나옵니다.
 앱 코드, 원본 자료, 만들어진 자료는 이 저장소에 들어 있지 않습니다. 자료를 만드는 방법만 공개합니다.
 
 ### 만들어 내는 것
 
-모두 한국 땅 쪽으로만 잘라 냅니다. 북쪽 경계는 압록강과 두만강의 중심선입니다.
+모두 한국 땅 쪽으로만 잘라 냅니다. 북쪽 경계는 압록강과 두만강의 중심선입니다. (`city.bin`만은 한양과 서라벌 둘레의 두 상자 안만 담습니다.)
 
 | 내용 | 파일 |
 | --- | --- |
-| 배율 띠별 봉우리 산 그림 목록 (A 약 4배, B 약 8배, C 약 16배) | `out/bundle/peaks_A.bin`, `peaks_B.bin`, `peaks_C.bin` |
+| 산줄기 띠: 한국 땅을 위도 줄로 가르고 줄마다 산마루 높이, 몸통이 처지는 길이, 먹의 무게, 바위 비율을 적은 것 (배율 단계 4배, 8배, 16배) | `out/bundle/bands_4.bin`, `bands_8.bin`, `bands_16.bin` |
 | 해안선과 강 (A), 개울 (B), 호수와 넓은 강 | `out/bundle/lines_A.bin`, `lines_B.bin` |
-| 산줄기를 잇는 희미한 번짐용 큰 분수령 | `out/bundle/ridges.bin` |
+| 한양과 서라벌을 깊이 키웠을 때(8배 위)의 도성과 산성 성벽, 궁궐과 사당 담장, 옛 건물, 고분, 유적 터, 큰길 | `out/bundle/city.bin` |
 | 한국 땅 면 (조각별) | `out/bundle/land_A.bin`, `land_B.bin` |
 | 상세 층이 그릴 구역 (한국 땅과 바다 25 km 안) | `out/bundle/area.bin` |
 | 이름표: 봉우리, 강, 개울, 시·군·읍 이름 (한국어) | `out/bundle/labels.bin` |
@@ -26,14 +27,18 @@ OpenStreetMap과 Copernicus GLO-30 높낮이 자료를 읽어서 앱이 쓰는 �
 | 일반 지도의 손그림 산을 실제 봉우리로 옮기는 값 | `out/general/glyph_moves.json`, `MapBase_moved.json` |
 | 일반 지도용 한국 땅 해안 (OSM 해안선) | `out/general/korea_land_general.json` |
 | 검사 값 (해안선 차이, 파일 크기) | `out/land_check.json`, `out/sizes.json` |
+| 옛 산 그림 목록(봉우리마다 그린 산)과 분수령 번짐. 앱이 예전에 쓰던 것으로, 지금 앱은 읽지 않습니다 | `out/legacy/peaks_A.bin`, `peaks_B.bin`, `peaks_C.bin`, `ridges.bin` |
 
-파일 짜임새는 `bundle.py` 맨 위 설명과 `geom.py`의 `pack`에 적혀 있습니다.
+산줄기 띠(`bands_*.bin`)는 예전의 봉우리별 산 그림(`out/legacy/`)을 대신합니다. 옛 파일은 `bundle.py`가 봉우리 목록(`work/peaks.json`)을 만드는 김에 함께 쓰고, `bands.py`는 이 봉우리 목록을 읽어 두드러진 봉우리 둘레의 먹을 짙게 하고 강조 표시를 하는 데 씁니다.
+
+파일 짜임새는 `bundle.py`, `bands.py`, `city.py` 맨 위 설명과 `geom.py`의 `pack`에 적혀 있습니다.
 좌표는 모두 지도 점(1360 x 2400, 메르카토르 투영, 경도 124.0~131.95, 위도 32.85~43.15)입니다. 위경도에서 바꾸는 식은 `common.py`의 `proj`입니다.
 
 ### 준비물
 
 - Python 3.9 이상, zsh (`build.sh`가 zsh 스크립트입니다. macOS는 기본으로 있습니다.)
 - 파이썬 꾸러미: `requirements.txt` (numpy, rasterio, scipy, Pillow)
+- `bands.py`는 작업 6개를 동시에 돌립니다. 코어가 많을수록 빠릅니다.
 - 디스크 여유 약 2.5 GB (내려받는 자료 약 1.7 GB, 중간 결과 `work/` 약 200 MB, 결과 `out/` 약 10 MB)
 
 ```sh
@@ -74,9 +79,11 @@ export DETAILMAP_MAPBASE=/경로/MapBase.json   # 또는 data/MapBase.json 에 �
 | `osm_extract.py` | PBF에서 해안, 물줄기, 호수, 이름을 뽑습니다. (`osmpbf.py`는 추가 꾸러미 없는 PBF 읽개) |
 | `osm_boundary.py` | 남북의 영역을 뽑습니다. 국경이 강을 따르는 곳의 땅 경계가 됩니다. |
 | `korea_mask.py` | 일반 지도 장면으로 한국 땅 가리개를 만듭니다. |
-| `terrain.py` | 높낮이 조각마다 두드러진 봉우리와 큰 분수령을 찾습니다. (조각마다 따로 돌며 5개씩 동시에 실행) |
-| `land.py` | 한국 땅 면, 자르기 가리개, 그릴 구역, 일반 지도용 해안을 만듭니다. |
-| `bundle.py` | 위의 결과를 묶어 `out/bundle/`의 이진 파일과 이름표, 글자 목록을 씁니다. |
+| `terrain.py` | 높낮이 조각마다 두드러진 봉우리와 큰 분수령을 찾습니다. (조각마다 따로 돌며 5개씩 동시에 실행) 봉우리는 이름표와 산줄기 띠에 쓰입니다. |
+| `land.py` | 한국 땅 면, 자르기 가리개(`work/korea_crop.npz`), 그릴 구역, 일반 지도용 해안을 만듭니다. |
+| `bundle.py` | 위의 결과를 묶어 `out/bundle/`의 이진 파일과 이름표, 글자 목록을 씁니다. 봉우리 목록 `work/peaks.json`도 여기서 만들어 `bands.py`가 읽습니다. |
+| `bands.py` | 높낮이에서 산줄기 띠를 만듭니다. 지도를 가로 줄로 가르고(4배 단계는 16, 8배 단계는 8, 16배 단계는 4 지도 점 간격), 줄마다 그 띠 안에서 골짜기 바닥(둘레 8 km)보다 가장 솟은 땅을 따라 산마루 높이를 잽니다. 128 지도 점짜리 창 95개를 작업 6개로 나눠 돌며 약 2분 안쪽입니다. `--pack`을 주면 `work/bands_full.pkl`에 저장해 둔 계산 결과로 파일 묶기만 다시 합니다. |
+| `city.py` | OSM에서 한양과 서라벌 둘레의 도성·산성 성벽, 궁궐과 사당 담장, 옛 건물, 고분, 유적 터, 큰길을 뽑아 `city.bin`으로 씁니다. 남한 PBF 하나만 읽고 약 1분 걸립니다. |
 
 중간 결과는 `work/`, 최종 결과는 `out/`에 쌓입니다. `./build.sh tiles`만 쓰면 내려받을 주소만 보여 주고 끝납니다.
 
@@ -125,18 +132,18 @@ export DETAILMAP_MAPBASE=/경로/MapBase.json   # 또는 data/MapBase.json 에 �
 
 ## English
 
-Tools that build the "detail map" data for the iOS app 대동명소도 (Daedong Myeongsodo), an ink-wash style map of Korea. When the user zooms in, the app draws real mountain summits as brush-style glyphs, with coastline, rivers, streams, lakes and Korean place names on top. These scripts read OpenStreetMap and Copernicus GLO-30 elevation data and write the binary files the app uses.
+Tools that build the "detail map" data for the iOS app 대동명소도 (Daedong Myeongsodo), an ink-wash style map of Korea. When the user zooms in, the app draws the mountain ranges as layered brush-stroke bands, with coastline, rivers, streams, lakes and Korean place names on top; zoomed far into Seoul and Gyeongju it also draws the old city walls, palace fences, halls, tombs and main roads. These scripts read OpenStreetMap and Copernicus GLO-30 elevation data and write the binary files the app uses.
 The app code, the source data and the generated data are not in this repository. Only the method of producing the data is published.
 
 ### What it produces
 
-Everything is clipped to the Korean side; the northern limit is the centre line of the Yalu (압록강) and Tumen (두만강) rivers.
+Everything is clipped to the Korean side; the northern limit is the centre line of the Yalu (압록강) and Tumen (두만강) rivers. (`city.bin` is the exception: it holds only two boxes around Seoul and Gyeongju.)
 
 | Content | File |
 | --- | --- |
-| Peak glyph lists per zoom band (A about 4x, B about 8x, C about 16x) | `out/bundle/peaks_A.bin`, `peaks_B.bin`, `peaks_C.bin` |
+| Range bands: the land cut into latitude lines, with crest height, how far the body hangs below the line, ink weight and crag share per line (levels 4x, 8x, 16x) | `out/bundle/bands_4.bin`, `bands_8.bin`, `bands_16.bin` |
 | Coastline and rivers (A), streams (B), lakes and wide rivers | `out/bundle/lines_A.bin`, `lines_B.bin` |
-| Major drainage divides for the faint ridge wash between glyphs | `out/bundle/ridges.bin` |
+| City layer for Seoul and Gyeongju at deep zoom (above 8x): city and fortress walls, palace and shrine fences, old halls, tombs, archaeological sites, main roads | `out/bundle/city.bin` |
 | Korean land polygons, per tile | `out/bundle/land_A.bin`, `land_B.bin` |
 | Area the detail layer draws (Korean land plus sea within 25 km) | `out/bundle/area.bin` |
 | Labels: peaks, rivers, streams, city/county/town names (Korean) | `out/bundle/labels.bin` |
@@ -144,14 +151,18 @@ Everything is clipped to the Korean side; the northern limit is the centre line 
 | Moves that put the general map's hand-drawn mountains on real summits | `out/general/glyph_moves.json`, `MapBase_moved.json` |
 | Korean land for the general map (OSM coastline) | `out/general/korea_land_general.json` |
 | Check values (coastline offset, file sizes) | `out/land_check.json`, `out/sizes.json` |
+| Old per-summit glyph lists and the divide wash. The app used them earlier and no longer reads them | `out/legacy/peaks_A.bin`, `peaks_B.bin`, `peaks_C.bin`, `ridges.bin` |
 
-The file formats are described at the top of `bundle.py` and in `geom.pack`.
+The range bands (`bands_*.bin`) replace the old per-summit glyphs (`out/legacy/`). `bundle.py` still writes the old files while it builds the summit list `work/peaks.json`, and `bands.py` reads that list to darken the stroke around prominent summits and mark them as accents.
+
+The file formats are described at the top of `bundle.py`, `bands.py` and `city.py`, and in `geom.pack`.
 All coordinates are map points: a 1360 x 2400 plane in Mercator projection covering longitude 124.0 to 131.95 and latitude 32.85 to 43.15. `proj` in `common.py` converts longitude and latitude.
 
 ### Requirements
 
 - Python 3.9 or newer, and zsh (`build.sh` is a zsh script; macOS has it by default)
 - Python packages in `requirements.txt` (numpy, rasterio, scipy, Pillow)
+- `bands.py` runs six worker processes at once; more cores make it faster.
 - About 2.5 GB of free disk (downloads about 1.7 GB, intermediate `work/` about 200 MB, results `out/` about 10 MB)
 
 ```sh
@@ -191,9 +202,11 @@ export DETAILMAP_MAPBASE=/path/to/MapBase.json   # or put the file at data/MapBa
 | `osm_extract.py` | Pulls coastline, waterways, lakes and names out of the PBF files (`osmpbf.py` is a PBF reader that needs no extra packages). |
 | `osm_boundary.py` | Extracts the national territories of the two countries; this gives the land border where it follows the border rivers. |
 | `korea_mask.py` | Builds a Korean-land mask from the general-map scene. |
-| `terrain.py` | Finds prominent summits and major divides per DEM tile (one process per tile, five at a time). |
-| `land.py` | Builds the Korean land polygons, the clipping masks, the draw area and the coast for the general map. |
-| `bundle.py` | Packs everything into the binary files, labels and character lists in `out/bundle/`. |
+| `terrain.py` | Finds prominent summits and major divides per DEM tile (one process per tile, five at a time). The summits feed the labels and the range bands. |
+| `land.py` | Builds the Korean land polygons, the clipping masks (`work/korea_crop.npz`), the draw area and the coast for the general map. |
+| `bundle.py` | Packs everything into the binary files, labels and character lists in `out/bundle/`. It also builds the summit list `work/peaks.json`, which `bands.py` reads. |
+| `bands.py` | Builds the range bands from the DEM. The map is cut into horizontal lines (spacing 16, 8 and 4 map points for the 4x, 8x and 16x levels); on each line the crest height follows the highest relief above the valley floor (8 km neighbourhood) found in that line's band. 95 windows of 128 map points are spread over six worker processes; under about two minutes. `--pack` only repacks from the cached results in `work/bands_full.pkl`. |
+| `city.py` | Extracts the city and fortress walls, palace and shrine fences, old halls, tombs, archaeological sites and main roads around Seoul and Gyeongju from OSM and writes `city.bin`. It reads only the South Korea PBF; about one minute. |
 
 Intermediate results go to `work/`, final results to `out/`. `./build.sh tiles` only prints the download URLs and exits.
 

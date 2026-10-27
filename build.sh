@@ -1,7 +1,7 @@
 #!/bin/zsh
 # 대동명소도 상세 지도 자료 만들기 (detail map build)
 #
-# 상세 확대에서 실제 봉우리 자리에 일반 지도와 같은 붓말의 산 그림을 놓는 데 쓰는 자료를 만든다.
+# 상세 확대의 해안·강·땅·이름표와, 가로로 겹친 산줄기 띠(bands.py) 자료를 만든다.
 # 결과는 out/bundle (앱에 넣을 이진 자료), out/general (일반 지도 산 그림 옮김).
 # 이 폴더의 work/ 와 out/ 밖에는 아무것도 쓰지 않는다.
 #
@@ -10,7 +10,7 @@
 #   data/dem/  Copernicus GLO-30 1도 조각 50장 (AWS copernicus-dem-30m, build.sh tiles 로 목록을 본다)
 #   data/osm/  Geofabrik south-korea-latest.osm.pbf, north-korea-latest.osm.pbf
 # 차례:
-#   ./build.sh            전부 (OSM 뽑기 -> 지형 -> 땅 -> 자료 묶기)
+#   ./build.sh            전부 (OSM 뽑기 -> 지형 -> 땅 -> 자료 묶기 -> 산줄기 띠 -> 한양·서라벌 도시)
 #   ./build.sh tiles      내려받을 Copernicus 조각 주소 목록
 # 일반 지도 장면 (MapBase.json, 이 저장소에는 없음): 환경변수 DETAILMAP_MAPBASE에 경로를 주거나 data/MapBase.json에 둔다.
 #   어느 것도 없으면 처음에 멈춘다. 장면에 무엇이 들어 있어야 하는지는 README.md.
@@ -19,7 +19,9 @@
 #   osm_boundary.py 남북의 영역 (국경 강을 따르는 땅 경계)
 #   terrain.py      조각마다 두드러짐 봉우리와 큰 분수령 (korea_mask.py로 한국 땅만)
 #   land.py         한국 땅 면 (해안선 + 압록강·두만강 중심선), 자르기 가리개, 상세 층이 그릴 구역, 일반 지도용 해안
-#   bundle.py       배율별 산 그림 목록, 선, 땅, 분수령 번짐, 구역, 이름표, 글자 목록, 일반 지도 산 그림 옮김, 크기
+#   bundle.py       선, 땅, 구역, 이름표, 글자 목록, 일반 지도 산 그림 옮김, 크기 (봉우리 목록 work/peaks.json)
+#   bands.py        산줄기 띠 (4·8·16배 단계, 128포인트 창을 6개씩 나눠, 약 2분)
+#   city.py         한양·서라벌을 깊이 키웠을 때(8~64배)의 도성, 궁궐 담장과 옛 건물, 고분, 유적 터, 큰길 (city.bin, 약 1분)
 #   (확인 그림 단계 preview.py는 이 공개 판에 없다. 파일이 있을 때만 도는 칸은 남겨 두었다.)
 # 결과 쓰기: out/bundle/*.bin을 앱의 자료 폴더에 복사한다. 일반 지도 쪽은 out/general/ 의 JSON을 쓴다.
 # 사용권: 지도 자료는 © OpenStreetMap 기여자 (ODbL 1.0). 이 폴더의 도구가 파생 자료를 만드는 방법이다.
@@ -55,5 +57,7 @@ if [[ "$1" != preview ]]; then
     './.venv/bin/python -I terrain.py $0 $1 work/korea_mask.npz work/terrain/$0_$1.json'
   $PY -I land.py
   $PY -I bundle.py
+  $PY -I bands.py
+  $PY -I city.py data/osm/south-korea-latest.osm.pbf
 fi
 if [[ $HAVE_PREVIEW == 1 ]]; then $PY -I preview.py; fi

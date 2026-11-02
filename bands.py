@@ -33,19 +33,19 @@ from geom import pack  # noqa: E402
 
 D = 8                                                   # DEM cells per map point (~67 m)
 LEVELS = (4, 8, 16)
-SPACING = {4: 16.0, 8: 8.0, 16: 4.0}                    # map pt between layers
+SPACING = {4: 40.0, 8: 20.0, 16: 10.0}                  # map pt between layers (2026-11-02: 16/8/4 -> x2.5, fewer and bigger mountains)
 STEP = {4: 0.5, 8: 0.25, 16: 0.25}                      # map pt between samples along a line
-SIG = {4: (380.0, 780.0), 8: (330.0, 700.0), 16: (220.0, 520.0)}   # relief (m): faint .. full weight
+SIG = {4: (560.0, 1000.0), 8: (500.0, 920.0), 16: (400.0, 780.0)}  # relief (m): faint .. full weight (2026-11-02: raised, only real ranges)
 ACCENT = {4: 600, 8: 380, 16: 250}                      # prominence (m) of summits that get an accent
 PROM = {4: (300.0, 800.0), 8: (220.0, 650.0), 16: (160.0, 500.0)}   # prominence (m): weight boost around a summit
-MINLEN = {4: 6.0, 8: 3.5, 16: 2.0}                      # map pt: shortest stretch worth a brush stroke
-HQ = {4: 8.0, 8: 12.0, 16: 16.0}                        # h and b quantum (units per map pt)
+MINLEN = {4: 15.0, 8: 9.0, 16: 5.0}                     # map pt: shortest stretch worth a brush stroke
+HQ = {4: 3.0, 8: 4.5, 16: 6.0}                          # h and b quantum (units per map pt; 255/HQ is the tallest crest)
 STRIP = {4: 128, 8: 64, 16: 32}                         # map pt per strip (file tile)
 FLOOR = 8000.0                                          # m: valley-floor neighbourhood
 BASE = 0.4                                              # share of the (smoothed) height the body hangs down
-A = 52.0                                                # screen pt for a 1000 m rise at 5.66x
+A = 130.0                                               # screen pt for a 1000 m rise at 5.66x (2026-11-02: 52 -> x2.5)
 CORE = 128.0                                            # map pt per window (national build)
-PAD = 56.0                                              # map pt of DEM around a window
+PAD = 80.0                                              # map pt of DEM around a window (covers the neighbour slabs at spacing 40)
 XPAD = 30.0                                             # map pt of samples computed past the window's sides
 
 
